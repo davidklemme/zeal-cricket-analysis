@@ -1,6 +1,8 @@
 import logging
+import time
 import os
 import psycopg2
+import psycopg2.extras as extras
 import threading
 import requests, zipfile, io
 import json
@@ -28,6 +30,9 @@ cursor.execute("DROP SCHEMA public CASCADE;")
 cursor.execute("CREATE SCHEMA public;")
 
 def readStatements(file ):
+    '''
+    read the statements into memory from file to execute against the DB via psycopg2
+    '''
     logging.debug('Trying to open sql file %s',file)
     location = sqlDir+'/'+file
     file = open(location)
@@ -44,6 +49,9 @@ def readStatements(file ):
     return sqlFile.split(';')
 
 def getExternalData() : 
+    '''
+    Get External data, as defined by env var /url/ and the set data directory
+    '''
     numberOfFiles = 0    
     response = requests.get(url, stream='true')
     content = zipfile.ZipFile(io.BytesIO(response.content))
@@ -57,7 +65,10 @@ def getExternalData() :
     result_available.set()
 
 def createSchema(cursor) :
-    
+    '''
+    Creating tables in the DB, based on schema file defined in sql folder. File is specified as a env var.
+    Function will iterate over all statements it finds in the file.
+    '''
     statements = readStatements(os.environ.get('DB_SCHEMA_FILE'))
     for statement in statements:
         if statement == '': 
@@ -70,7 +81,7 @@ try:
     logging.info("Downloading data from %s", url)
     thread = threading.Thread(target=getExternalData)
     thread.start()
-
+    '''need to wait for download to be completed before we can read and extract the data'''
     result_available.wait()
     cursor = conn.cursor()
     createSchema(cursor)
@@ -84,7 +95,14 @@ except Exception as error:
 
 
 try:    
+    '''
+    Look into the defined data directory and iterate over all files.
+    Files are assumed to be valid JSON format. If they are not, we will log the exception and continue. 
+    This would not be sufficient in certain prod environments, but I'll skip the handler for this exercise.
+    '''
     logging.info('Persisting data ..')
+    start = time.time()
+    logging.debug('Start time: %s',start)
     files = os.scandir(dataDir)
     cursor = conn.cursor()
     for index,file in enumerate(files):
@@ -93,45 +111,48 @@ try:
             fileObj = open(dataDir+'/'+file.name)
             try:
                 data = json.load(fileObj)
-                persistData(data, conn)
-                logging.info('Persisted data file %s',index)
+                persistData(data, conn, extras)
+                if index % 10 == 0:
+                    logging.info('Persisted data file %s',index)
             except Exception as error:
                 logging.exception('Error persisting data', exc_info=1)
-                
+    end = time.time()
+    logging.debug('Total time elapsed %s', end-start)      
 except Exception as error:
     logging.exception("reading json files NOK @ %s", error)
 
-#Get wins and display @ stdout
-winsFile = os.environ.get("WINS_BY_TEAM")
-winStatements = readStatements(winsFile)
 
-try:
-    logging.info("Getting wins per team")
-    cursor = conn.cursor()
-    cursor.execute(cursor.mogrify(winStatements[0]))
-    table = from_db_cursor(cursor)
-    print(table)
+logging.info('Done loading data.')
+'''
+Define array for the results to be displayed.
+Iterate over array and display data directly via stdout
+'''
+selectsArray = ['WINS_BY_TEAM','WINNINGEST','BATTING']
 
-except Exception as error:
-    logging.warning("Error getting wins %s", error)
-    
+selectsDescription = [
+    'The win records (percentage win and total wins) for each team by year and gender, excluding ties, matches with no result, and matches decided by the DLS method in the event that, for whatever reason, the planned innings cant be completed',
+    'Which male and female teams had the highest win percentages in 2019? Tie breaker are the total number of wins',
+    'Which players had the highest strike rate as batsmen in 2019?'
+    ]
 
-#Get best teams from 2019
+for i,it in enumerate(selectsArray):
+    file= os.environ.get(it)
+    statements = readStatements(file)
 
-bestFile = os.environ.get("WINNINGEST")
-logging.info('env var %s', bestFile)
-bestStatements = readStatements(bestFile)
+    try:
+        logging.info("Getting %s", it)
+        cursor = conn.cursor()
+        cursor.execute(cursor.mogrify(statements[0]))
+        table = from_db_cursor(cursor)
+        print('############################')
+        print(selectsDescription[i])
+        print('##############')
+        print(table)
+        print('############################')
 
-try:
-    logging.info("Getting best teams from 2019")
-    cursor = conn.cursor()
-    cursor.execute(cursor.mogrify(bestStatements[0]))
-    table = from_db_cursor(cursor)
-    print(table)
-
-except Exception as error:
-    logging.warning("Error getting wins %s", error)
-    
+    except Exception as error:
+        logging.warning("Error getting wins %s", error)
+        
 
 
 conn.close()

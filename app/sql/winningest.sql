@@ -37,7 +37,8 @@ select
   games, 
   wins,
   ROUND(wins*100/nullif(games,0)::float) as winning_percentage,
-  rank() over( partition by wins.gender order by ROUND(wins*100/nullif(games,0)::float) desc) as rank
+  row_number() over( partition by wins.gender order by ROUND(wins*100/nullif(games,0)::float) desc,wins desc) as rank
+  --TIE BREAKER, total number of wins
 from 
   totals,wins,matches
 where 
@@ -45,7 +46,7 @@ where
   wins.gender=totals.gender AND
   wins.year=totals.year AND 
   matches.winner_id IS NOT NULL AND
-  totals.year= '2021'
+  totals.year= '2019'
 group by 
   totals.name,
   wins.name,
