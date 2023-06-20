@@ -11,7 +11,10 @@ from prettytable import from_db_cursor
 from match import persistData
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(filename='app.log',
+                    filemode='a',
+                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                    datefmt='%H:%M:%S',level=logging.DEBUG)
 logging.info('Initializing App..')
 
 dataDir = 'external'

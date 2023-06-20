@@ -1,11 +1,14 @@
 import logging
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(filename='db_insert.log',
+                    filemode='a',
+                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                    datefmt='%H:%M:%S',level=logging.DEBUG)
 '''
 Batch size number for postgres executions
 '''
-pageSize = 100
+pageSize = 10000
 
 def persistData(data, connection, extras):
     '''
@@ -40,16 +43,18 @@ def persistData(data, connection, extras):
             (%s, %s, %s, %s, %s, %s, %s, %s, %s, (SELECT id from teams where name = %s limit 1))
         RETURNING id;
         """, [
-            (matches.get('event').get('name'), 
+            (
+            matches.get('event').get('name'), 
             matches.get('event').get('match_number'), 
             matches.get('match_type'),
-            matches['venue'], 
-            matches['city'], 
+            matches.get('venue'), 
+            matches.get('city'), 
             matches.get('dates')[0],
             matches.get('gender'),
             matches.get('overs'), 
             matches.get('team_type'), 
-            matches.get('outcome').get('winner') )
+            matches.get('outcome').get('winner') 
+            )
         ]
     ,pageSize)
     
@@ -63,7 +68,7 @@ def persistData(data, connection, extras):
                         INSERT INTO teams (name, matches_id, team_type) VALUES (%s, %s, %s);
                     """, [(team,match_id, matches.get('team_type'))],pageSize)
             
-            connection.commit()
+    connection.commit()
             
     # OUTCOMES
     '''I miss Elvis :('''
@@ -227,3 +232,4 @@ def persistData(data, connection, extras):
                         INSERT INTO extras (delivery_id, extra_type, count)
                         VALUES (%s, %s, %s);
                     """, extrasValues,pageSize)
+    connection.commit()
