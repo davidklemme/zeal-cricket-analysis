@@ -27,7 +27,6 @@ CREATE TABLE IF NOT EXISTS registry (
   player_id INT,
   FOREIGN KEY (player_id) REFERENCES players(id)
 );
-
 CREATE TABLE IF NOT EXISTS matches (
   id SERIAL PRIMARY KEY,
   balls_per_over INT,
@@ -42,13 +41,30 @@ CREATE TABLE IF NOT EXISTS matches (
   team_type VARCHAR(100),
   overs INT,
   winner_id INT,
-  outcome_by INT,
+  outcome_id INT,
   player_of_match_id INT,
   toss_decision VARCHAR(10),
   toss_winner_id INT,
   venue VARCHAR(100),
   FOREIGN KEY (player_of_match_id) REFERENCES players(id),
   FOREIGN KEY (toss_winner_id) REFERENCES teams(id)
+);
+CREATE TABLE IF NOT EXISTS outcomes (
+    id SERIAL PRIMARY KEY,
+    matches_id INT,
+    by_innings INT,
+    by_runs INT,
+    by_wickets INT,
+    bowl_out_id INT,
+    eliminator_id INT,
+    method VARCHAR(20),
+    result VARCHAR(20),
+    winner_id INT,
+    FOREIGN KEY (matches_id) REFERENCES matches(id),
+    FOREIGN KEY (bowl_out_id) REFERENCES teams(id),
+    FOREIGN KEY (eliminator_id) REFERENCES teams(id),
+    FOREIGN KEY (winner_id) REFERENCES teams(id)
+
 );
 CREATE TABLE IF NOT EXISTS innings (
   id SERIAL PRIMARY KEY,

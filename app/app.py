@@ -4,6 +4,8 @@ import psycopg2
 import threading
 import requests, zipfile, io
 import json
+from prettytable import PrettyTable
+from prettytable import from_db_cursor
 from match import persistData
 
 
@@ -11,6 +13,7 @@ logging.basicConfig(level=logging.DEBUG)
 logging.info('Initializing App..')
 
 dataDir = 'external'
+sqlDir = 'sql'
 url = os.environ["CRICKET_DATA_URL"]
 database = os.environ["POSTGRES_DB"]
 dbUser = os.environ["POSTGRES_USER"]
@@ -23,6 +26,22 @@ conn = psycopg2.connect(dbname=database, user=dbUser, host='db', password=dbPass
 cursor = conn.cursor()
 cursor.execute("DROP SCHEMA public CASCADE;")
 cursor.execute("CREATE SCHEMA public;")
+
+def readStatements(file ):
+    logging.debug('Trying to open sql file %s',file)
+    location = sqlDir+'/'+file
+    file = open(location)
+    file.seek(0)
+    sqlFile = file.read()
+    if sqlFile == '':
+        curDataDir = os.scandir(sqlDir)
+        logging.warning('SQL directory: %s', location)
+
+        for entry in curDataDir:
+            if entry.is_dir() or entry.is_file():
+                logging.warning('SQL directory: %s', entry)
+        raise Exception('Couldnt read statements.')
+    return sqlFile.split(';')
 
 def getExternalData() : 
     numberOfFiles = 0    
@@ -38,9 +57,8 @@ def getExternalData() :
     result_available.set()
 
 def createSchema(cursor) :
-    schemaFile = open('sql/db_schema.sql')
-    sqlFile = schemaFile.read()
-    statements = sqlFile.split(';')
+    
+    statements = readStatements(os.environ.get('DB_SCHEMA_FILE'))
     for statement in statements:
         if statement == '': 
             break
@@ -70,6 +88,8 @@ try:
     files = os.scandir(dataDir)
     cursor = conn.cursor()
     for index,file in enumerate(files):
+            # if index>100:
+            #     break
             fileObj = open(dataDir+'/'+file.name)
             try:
                 data = json.load(fileObj)
@@ -77,12 +97,41 @@ try:
                 logging.info('Persisted data file %s',index)
             except Exception as error:
                 logging.exception('Error persisting data', exc_info=1)
-                os._exit(os.EX_NOHOST)
-    
-
+                
 except Exception as error:
     logging.exception("reading json files NOK @ %s", error)
-    os._exit(os.EX_NOINPUT)
 
-logging.info("Exiting app.") 
+#Get wins and display @ stdout
+winsFile = os.environ.get("WINS_BY_TEAM")
+winStatements = readStatements(winsFile)
+
+try:
+    logging.info("Getting wins per team")
+    cursor = conn.cursor()
+    cursor.execute(cursor.mogrify(winStatements[0]))
+    table = from_db_cursor(cursor)
+    print(table)
+
+except Exception as error:
+    logging.warning("Error getting wins %s", error)
+    
+
+#Get best teams from 2019
+
+bestFile = os.environ.get("WINNINGEST")
+logging.info('env var %s', bestFile)
+bestStatements = readStatements(bestFile)
+
+try:
+    logging.info("Getting best teams from 2019")
+    cursor = conn.cursor()
+    cursor.execute(cursor.mogrify(bestStatements[0]))
+    table = from_db_cursor(cursor)
+    print(table)
+
+except Exception as error:
+    logging.warning("Error getting wins %s", error)
+    
+
+
 conn.close()

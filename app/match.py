@@ -12,12 +12,12 @@ def persistData(data, connection):
     # MATCH
     # TODO add rest of data to insert
     cursor.execute("""
-        INSERT INTO matches (event_name, match_number, match_type, venue, city, match_date, gender, overs, team_type, winner_id, outcome_by)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, (SELECT id from teams where name = %s), %s)
+        INSERT INTO matches (event_name, match_number, match_type, venue, city, match_date, gender, overs, team_type, winner_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, (SELECT id from teams where name = %s limit 1))
         RETURNING id;
     """, (matches.get('event').get('name'), matches.get('event').get('match_number'), matches.get('match_type'),
           matches['venue'], matches['city'], matches.get('dates')[0], matches.get('gender'),
-          matches.get('overs'), matches.get('team_type'), matches.get('outcome').get('winner'),matches.get('outcome').get('by').get('wickets') ))
+          matches.get('overs'), matches.get('team_type'), matches.get('outcome').get('winner') ))
     match_id = cursor.fetchone()
     connection.commit()
     
@@ -30,6 +30,31 @@ def persistData(data, connection):
             
             connection.commit()
             
+    # OUTCOMES
+    if matches.get('outcome').get('by') is None:
+        cursor.execute(
+            """INSERT INTO outcomes (matches_id, bowl_out_id, eliminator_id, method, result, winner_id) VALUES (%s,(SELECT id from teams where name=%s),(SELECT id from teams where name=%s),%s,%s,(SELECT id from teams where name= %s))""",
+            (
+                match_id, matches.get('outcome').get('bowl_out'), matches.get('outcome').get('eliminator'), matches.get('outcome').get('method'), matches.get('outcome').get('result'), matches.get('team')
+            )
+        )
+    else:
+        cursor.execute(
+            """INSERT INTO outcomes (matches_id, bowl_out_id, eliminator_id, method, result, winner_id, by_runs, by_innings, by_wickets) VALUES (%s,%s,%s,%s,%s,(SELECT id from teams where name= %s),%s,%s ,%s)""",
+            (
+                match_id, 
+                matches.get('outcome').get('bowl_out'), 
+                matches.get('outcome').get('eliminator'), 
+                matches.get('outcome').get('method'), 
+                matches.get('outcome').get('result'), 
+                matches.get('team'),
+                matches.get('outcome').get('by').get('runs'),
+                matches.get('outcome').get('by').get('innings'),
+                matches.get('outcome').get('by').get('wickets')
+            )
+        )
+
+    connection.commit()
     
     # PLAYER INFO
     for team, players in matches['players'].items():
