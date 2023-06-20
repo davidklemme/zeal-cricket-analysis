@@ -9,6 +9,10 @@ services:
         interval: 5s
         timeout: 5s
         retries: 5
+      shm_size: 2gb
+      mem_limit: 2g
+      mem_reservation: 512m
+      cpus: 2
       environment:
         - POSTGRES_DB=postgres
         - POSTGRES_USER=postgres

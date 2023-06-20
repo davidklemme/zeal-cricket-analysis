@@ -1,33 +1,32 @@
-CREATE TABLE IF NOT EXISTS meta (
+CREATE UNLOGGED TABLE IF NOT EXISTS meta (
   data_version VARCHAR(10),
   created DATE,
   revision INT
-);
-CREATE TABLE IF NOT EXISTS officials (
+) WITH (autovacuum_enabled=false);
+CREATE UNLOGGED TABLE IF NOT EXISTS officials (
   id SERIAL PRIMARY KEY,
   name VARCHAR(150)
-);
-CREATE TABLE IF NOT EXISTS teams (
+) WITH (autovacuum_enabled=false);
+CREATE UNLOGGED TABLE IF NOT EXISTS teams (
   id SERIAL PRIMARY KEY,
   name VARCHAR(150),
   matches_id INT,
   team_type VARCHAR(50)
 --   CONSTRAINT unique_team_names UNIQUE (name)
-);
-
-CREATE TABLE IF NOT EXISTS players (
+) WITH (autovacuum_enabled=false);
+CREATE UNLOGGED TABLE IF NOT EXISTS players (
   id SERIAL PRIMARY KEY,
   name VARCHAR(150),
   team_id INT,
   FOREIGN KEY (team_id) REFERENCES teams(id)
-);
-CREATE TABLE IF NOT EXISTS registry (
+) WITH (autovacuum_enabled=false);
+CREATE UNLOGGED TABLE IF NOT EXISTS registry (
   id SERIAL PRIMARY KEY,
   person_id VARCHAR(150),
   player_id INT,
   FOREIGN KEY (player_id) REFERENCES players(id)
-);
-CREATE TABLE IF NOT EXISTS matches (
+) WITH (autovacuum_enabled=false);
+CREATE UNLOGGED TABLE IF NOT EXISTS matches (
   id SERIAL PRIMARY KEY,
   balls_per_over INT,
   city VARCHAR(150),
@@ -48,8 +47,8 @@ CREATE TABLE IF NOT EXISTS matches (
   venue VARCHAR(100),
   FOREIGN KEY (player_of_match_id) REFERENCES players(id),
   FOREIGN KEY (toss_winner_id) REFERENCES teams(id)
-);
-CREATE TABLE IF NOT EXISTS outcomes (
+) WITH (autovacuum_enabled=false);
+CREATE UNLOGGED TABLE IF NOT EXISTS outcomes (
     id SERIAL PRIMARY KEY,
     matches_id INT,
     by_innings INT,
@@ -64,22 +63,21 @@ CREATE TABLE IF NOT EXISTS outcomes (
     FOREIGN KEY (bowl_out_id) REFERENCES teams(id),
     FOREIGN KEY (eliminator_id) REFERENCES teams(id),
     FOREIGN KEY (winner_id) REFERENCES teams(id)
-
-);
-CREATE TABLE IF NOT EXISTS innings (
+) WITH (autovacuum_enabled=false);
+CREATE UNLOGGED TABLE IF NOT EXISTS innings (
   id SERIAL PRIMARY KEY,
   matches_id INT,
   FOREIGN KEY (matches_id) REFERENCES matches(id),
   team_id INT,
   FOREIGN KEY (team_id) REFERENCES teams(id)
-);
-CREATE TABLE IF NOT EXISTS overs (
+) WITH (autovacuum_enabled=false);
+CREATE UNLOGGED TABLE IF NOT EXISTS overs (
   id SERIAL PRIMARY KEY,
   inning_id INT,
   over_number INT,
   FOREIGN KEY (inning_id) REFERENCES innings(id)
-);
-CREATE TABLE IF NOT EXISTS deliveries (
+) WITH (autovacuum_enabled=false);
+CREATE UNLOGGED TABLE IF NOT EXISTS deliveries (
   id SERIAL PRIMARY KEY,
   over_id INT,
   batter_id INT,
@@ -92,27 +90,27 @@ CREATE TABLE IF NOT EXISTS deliveries (
   FOREIGN KEY (batter_id) REFERENCES players(id),
   FOREIGN KEY (bowler_id) REFERENCES players(id),
   FOREIGN KEY (non_striker_id) REFERENCES players(id)
-);
-CREATE TABLE IF NOT EXISTS wickets (
+) WITH (autovacuum_enabled=false);
+CREATE UNLOGGED TABLE IF NOT EXISTS wickets (
   id SERIAL PRIMARY KEY,
   delivery_id INT,
   player_out_id INT,
   kind VARCHAR(150),
   FOREIGN KEY (delivery_id) REFERENCES deliveries(id),
   FOREIGN KEY (player_out_id) REFERENCES players(id)
-);
-CREATE TABLE IF NOT EXISTS outcome (
+) WITH (autovacuum_enabled=false);
+CREATE UNLOGGED TABLE IF NOT EXISTS outcome (
   id SERIAL PRIMARY KEY,
   matches_id INT,
   winner_id INT,
   by_wickets INT,
   FOREIGN KEY (matches_id) REFERENCES matches(id),
   FOREIGN KEY (winner_id) REFERENCES teams(id)
-);
-CREATE TABLE IF NOT EXISTS extras (
+) WITH (autovacuum_enabled=false);
+CREATE UNLOGGED TABLE IF NOT EXISTS extras (
     id SERIAL PRIMARY KEY,
     delivery_id INT, 
     extra_type VARCHAR(50), 
     count INT,
     FOREIGN KEY (delivery_id) REFERENCES deliveries(id)
-);
+) WITH (autovacuum_enabled=false);

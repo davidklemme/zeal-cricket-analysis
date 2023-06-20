@@ -11,10 +11,12 @@ from prettytable import from_db_cursor
 from match import persistData
 
 
-logging.basicConfig(filename='app.log',
-                    filemode='a',
-                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                    datefmt='%H:%M:%S',level=logging.DEBUG)
+logging.basicConfig(
+                    # filename='app.log',
+                    # filemode='a',
+                    # format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                    # datefmt='%H:%M:%S',
+                    level=logging.DEBUG)
 logging.info('Initializing App..')
 
 dataDir = 'external'
@@ -109,16 +111,24 @@ try:
     files = os.scandir(dataDir)
     cursor = conn.cursor()
     for index,file in enumerate(files):
-            # if index>100:
-            #     break
+    
             fileObj = open(dataDir+'/'+file.name)
             try:
+                '''
+                Current approach loading single files to persist is non-performant (intake takes  roughly 35 mins as is), but I unfortunately have no more time to rewrite.
+                Better approach would be to fully utilizet the extras batch approach, which can also take in an array as the values argument.
+                Should have from the start build a data object, and the persisted the parts of the object.
+                '''
                 data = json.load(fileObj)
+            
                 persistData(data, conn, extras)
                 if index % 10 == 0:
                     logging.info('Persisted data file %s',index)
             except Exception as error:
                 logging.exception('Error persisting data', exc_info=1)
+    
+    print(matchesObj)
+
     end = time.time()
     logging.debug('Total time elapsed %s', end-start)      
 except Exception as error:
@@ -134,7 +144,7 @@ selectsArray = ['WINS_BY_TEAM','WINNINGEST','BATTING']
 
 selectsDescription = [
     'The win records (percentage win and total wins) for each team by year and gender, excluding ties, matches with no result, and matches decided by the DLS method in the event that, for whatever reason, the planned innings cant be completed',
-    'Which male and female teams had the highest win percentages in 2019? Tie breaker are the total number of wins',
+    'Which male and female teams had the highest win percentages in 2019? Tie breaker is the total number of wins',
     'Which players had the highest strike rate as batsmen in 2019?'
     ]
 
